@@ -1,0 +1,87 @@
+{
+  "entities": {
+    "Patient": {
+      "title": "Patient",
+      "description": "Anonymized patient record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "village": { "type": "string" },
+        "ward": { "type": "string" },
+        "ageMonths": { "type": "number" },
+        "gender": { "type": "string", "enum": ["male", "female", "other"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["village", "ageMonths", "gender"]
+    },
+    "Case": {
+      "title": "Case",
+      "description": "A single diagnostic case submission",
+      "type": "object",
+      "properties": {
+        "patientId": { "type": "string" },
+        "chvId": { "type": "string" },
+        "symptoms": { "type": "array", "items": { "type": "string" } },
+        "temperature": { "type": "number" },
+        "diagnosis": { "type": "string" },
+        "confidence": { "type": "number" },
+        "severity": { "type": "string", "enum": ["Low", "Urgent", "Critical"] },
+        "malnutritionStatus": { "type": "string", "enum": ["SAM", "MAM", "Normal"] },
+        "location": {
+          "type": "object",
+          "properties": {
+            "latitude": { "type": "number" },
+            "longitude": { "type": "number" }
+          }
+        },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "actionPlan": { "type": "string" },
+        "isReferred": { "type": "boolean" }
+      },
+      "required": ["patientId", "chvId", "diagnosis", "severity", "timestamp"]
+    },
+    "Alert": {
+      "title": "Outbreak Alert",
+      "description": "System generated outbreak alert",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "village": { "type": "string" },
+        "caseCount": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "resolved"] }
+      }
+    },
+    "User": {
+      "title": "User",
+      "description": "CHV or Health Officer profile",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["chv", "officer", "admin"] },
+        "name": { "type": "string" },
+        "village": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/patients/{patientId}": {
+      "schema": "Patient",
+      "description": "Collection of anonymized patients"
+    },
+    "/cases/{caseId}": {
+      "schema": "Case",
+      "description": "Collection of diagnostic cases"
+    },
+    "/alerts/{alertId}": {
+      "schema": "Alert",
+      "description": "Collection of outbreak alerts"
+    }
+  }
+}

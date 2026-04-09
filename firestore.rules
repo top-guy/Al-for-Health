@@ -1,0 +1,115 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: uid
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required)
+    //   - role: string (required, 'chv', 'officer', 'admin')
+    //   - name: string (optional)
+    //   - village: string (optional)
+    //
+    // Collection: patients
+    // Document ID: auto-id
+    // Fields:
+    //   - village: string (required)
+    //   - ageMonths: number (required)
+    //   - gender: string (required)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: cases
+    // Document ID: auto-id
+    // Fields:
+    //   - patientId: string (required)
+    //   - chvId: string (required)
+    //   - symptoms: list (required)
+    //   - temperature: number (optional)
+    //   - diagnosis: string (required)
+    //   - severity: string (required)
+    //   - malnutritionStatus: string (optional)
+    //   - timestamp: timestamp (required)
+    //   - actionPlan: string (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "jonahishaku0@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isOfficer() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'officer' || isAdmin());
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.role in ['chv', 'officer', 'admin'];
+    }
+
+    function isValidPatient(data) {
+      return data.keys().hasAll(['village', 'ageMonths', 'gender', 'createdAt']) &&
+             data.village is string && data.village.size() < 100 &&
+             data.ageMonths is number && data.ageMonths >= 0 &&
+             data.gender in ['male', 'female', 'other'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidCase(data) {
+      return data.keys().hasAll(['patientId', 'chvId', 'diagnosis', 'severity', 'timestamp']) &&
+             data.patientId is string &&
+             data.chvId is string &&
+             data.diagnosis is string && data.diagnosis.size() < 500 &&
+             data.severity in ['Low', 'Urgent', 'Critical'] &&
+             data.timestamp is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    (isOwner(userId) && request.resource.data.role == 'chv' || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    (isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role));
+    }
+
+    match /patients/{patientId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidPatient(request.resource.data);
+      allow update: if isAuthenticated() && isValidPatient(request.resource.data) && (isOfficer() || isAdmin());
+    }
+
+    match /cases/{caseId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidCase(request.resource.data);
+      allow update: if isAdmin();
+    }
+
+    match /alerts/{alertId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+  }
+}

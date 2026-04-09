@@ -1,0 +1,5 @@
+{
+  "name": "HealthGuard CHV",
+  "description": "AI-enabled mobile-first web app for Community Health Volunteers in rural districts, featuring symptom diagnostics, malnutrition detection, and outbreak alerts.",
+  "requestFramePermissions": ["camera", "geolocation", "notifications"]
+}
